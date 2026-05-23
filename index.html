@@ -345,7 +345,7 @@
         </div>
 
         <a href="#" id="downloadBtn" class="btn btn-primary">تحميل مباشر للـ APK</a>
-        <a href="https://github.com/waleeed-amr/apk.chat.on/releases" target="_blank" id="releasesBtn" class="btn btn-secondary">تصفح جميع الإصدارات</a>
+        <a href="https://github.com/waleeed-amr/apk.chat.on/" target="_blank" id="releasesBtn" class="btn btn-secondary">تصفح جميع الإصدارات</a>
     </div>
 
     <div class="footer-note">
@@ -391,55 +391,21 @@
 
         async function init() {
             try {
-                // 1. Check GitHub API
-                statusText.innerText = "جاري الفحص عبر سيرفرات GitHub...";
-                let ghVersion = '';
-                let ghUrl = '';
-                
-                try {
-                    const ghRes = await fetch(`https://api.github.com/repos/${window.GITHUB_REPO}/releases/latest`);
-                    if (ghRes.ok) {
-                        const ghData = await ghRes.json();
-                        ghVersion = ghData.tag_name ? ghData.tag_name.replace('v', '') : '';
-                        const apkAsset = ghData.assets?.find(a => a.name.endsWith('.apk'));
-                        if (apkAsset) ghUrl = apkAsset.browser_download_url;
-                    }
-                } catch(e) { console.log('GitHub fetch skipped or failed', e); }
-
-                // 2. Check Firestore AppConfig (Admin Panel Fallback)
-                statusText.innerText = "مزامنة البيانات مع لوحة تحكم Firebase...";
-                let fsVersion = '';
-                let fsUrl = '';
+                // Check Firestore AppConfig (Admin Panel)
+                statusText.innerText = "مزامنة البيانات مع لوحة تحكم التطبيق...";
                 
                 try {
                     const docSnap = await window.getDoc(window.doc(window.db, 'AppConfig', 'latestVersion'));
                     if (docSnap.exists()) {
                         const data = docSnap.data();
-                        fsVersion = data.versionName || '';
-                        fsUrl = data.downloadUrl || data.directDownloadUrl || '';
-                    }
-                } catch(e) { console.log('Firestore fetch skipped or failed', e); }
-
-                // 3. Compare and Decide
-                if (ghVersion && fsVersion) {
-                    // Compare versions
-                    const vGH = parseFloat(ghVersion.replace(/\./g, ''));
-                    const vFS = parseFloat(fsVersion.replace(/\./g, ''));
-                    if (vGH >= vFS) {
-                        bestVersion = ghVersion;
-                        finalDownloadUrl = ghUrl || window.FALLBACK_DOWNLOAD;
+                        bestVersion = data.versionName || '13.01.00';
+                        finalDownloadUrl = data.downloadUrl || data.directDownloadUrl || window.FALLBACK_DOWNLOAD;
                     } else {
-                        bestVersion = fsVersion;
-                        finalDownloadUrl = fsUrl || window.FALLBACK_DOWNLOAD;
+                        throw new Error("No config found");
                     }
-                } else if (ghVersion) {
-                    bestVersion = ghVersion;
-                    finalDownloadUrl = ghUrl || window.FALLBACK_DOWNLOAD;
-                } else if (fsVersion) {
-                    bestVersion = fsVersion;
-                    finalDownloadUrl = fsUrl || window.FALLBACK_DOWNLOAD;
-                } else {
-                    bestVersion = '11.00.00'; // Default fallback
+                } catch(e) { 
+                    console.log('Firestore fetch failed', e);
+                    bestVersion = 'الرسمي';
                 }
 
                 completeLoading();
